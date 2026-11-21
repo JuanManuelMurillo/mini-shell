@@ -1,0 +1,7 @@
+# "Si la ejecución falla se notifica el error (por el estándar error)"
+msh_run <<'IN'
+comandoquenoexiste
+echo st=$status
+IN
+expect_err_msg
+expect_st_nonzero 1

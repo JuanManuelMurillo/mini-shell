@@ -1,0 +1,10 @@
+msh_run <<'IN'
+umask 1 2
+echo st=$status
+umask 9
+echo st=$status
+umask
+IN
+expect_err_msg
+expect_st_nonzero 2
+expect_eq "$(tail -1 "$T/out")" "$(printf '%o' $((0$(umask))))" "la máscara no debe cambiar tras un error"

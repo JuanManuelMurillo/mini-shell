@@ -1,0 +1,15 @@
+# "Será ejecutado en un subshell sólo si se invoca en background o aparece en una secuencia
+#  y no es el último." → en esos casos NO debe tener efecto permanente.
+m=$(printf '%o' $((0$(umask))))
+msh_run <<'IN'
+cd / | cat
+pwd
+umask 077 | cat
+umask
+cd / &
+sleep 0.3
+pwd
+echo x | cd /
+pwd
+IN
+expect_out / "$PWD" "$m" "$m" / "$PWD" / /

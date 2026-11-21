@@ -1,0 +1,6 @@
+# mypid: "Identificador de proceso del propio minishell". Los mandatos son hijos directos.
+echo 'echo $PPID' > "$T/ppid.sh"
+printf 'echo $mypid\nsh %s\n' "$T/ppid.sh" > "$T/input"
+"$MSH" < "$T/input" > "$T/out" 2> "$T/err" & p=$!
+wait $p
+expect_out "$p" "$p"

@@ -1,0 +1,2 @@
+echo hola > f.txt
+cat f.txt

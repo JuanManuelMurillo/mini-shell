@@ -1,0 +1,22 @@
+# read: separadores espacio y tabulador; la última variable recibe el resto de la línea;
+# si hay menos palabras que variables, las últimas no cambian; son variables de entorno.
+msh_run <<'IN'
+read A B
+uno dos tres cuatro
+echo $A
+echo $B
+read X Y
+a b
+read X Y
+c
+echo $X $Y
+read T U
+	t1	t2
+echo $T-$U
+printenv A
+read
+echo st=$status
+IN
+expect_eq "$(head -5 "$T/out")" "$(printf "uno\ndos tres cuatro\nc b\nt1-t2\nuno")" "stdout"
+expect_st_nonzero 1
+expect_err_msg "read sin argumentos no notifica error por stderr"

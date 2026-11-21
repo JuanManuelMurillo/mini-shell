@@ -1,0 +1,15 @@
+# status: "Valor de terminación del último mandato o pipeline ejecutado en foreground"
+# El valor de una secuencia es el del último mandato.
+msh_run <<'IN'
+true
+echo $status
+false
+echo $status
+ls /noexiste
+echo $status
+true | false
+echo $status
+false | true
+echo $status
+IN
+expect_out 0 1 2 1 0

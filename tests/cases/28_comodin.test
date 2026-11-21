@@ -1,0 +1,12 @@
+# "?" casa con un carácter; sin coincidencias no se altera; con "/" no se trata; "*" no es comodín
+touch a1 a2 b1 abc
+msh_run <<'IN'
+echo a?
+echo ?1
+echo z?
+echo a??
+echo ./a?
+echo a*
+ls a?
+IN
+expect_out "a1 a2" "a1 b1" "z?" abc "./a?" "a*" a1 a2

@@ -1,0 +1,11 @@
+# prompt: "Mensaje de apremio antes de leer cada línea. Por defecto será "msh> "" (por stderr)
+msh_run <<'IN'
+echo uno
+read prompt
+XX>
+echo dos
+IN
+expect_out uno dos
+[ "$(head -c 5 "$T/err")" = "msh> " ] || fail "el prompt por defecto no es \"msh> \""
+grep -q "msh> " "$T/out" && fail "el prompt debe ir por stderr, no por stdout"
+grep -qF "XX>echo dos" "$T/err" || fail "tras \"read prompt\" el prompt no cambia a \"XX>\""

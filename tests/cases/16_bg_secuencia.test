@@ -1,0 +1,10 @@
+# bgpid de una secuencia en background = "el identificador del proceso por el que habría esperado" (el último)
+t0=$(now_ms)
+msh_run <<'IN'
+sleep 3 | sleep 4 &
+IN
+t1=$(now_ms)
+[ $((t1 - t0)) -lt 2000 ] || fail "msh se bloqueó con la secuencia en background"
+pid=$(grep -oE '^\[[0-9]+\]$' "$T/err" | tr -d '[]' | head -1)
+[ -n "$pid" ] || fail "no aparece \"[pid]\" en stderr"
+expect_eq "$(ps -o args= -p "$pid" 2>/dev/null)" "sleep 4" "proceso de bgpid"

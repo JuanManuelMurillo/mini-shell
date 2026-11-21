@@ -1,0 +1,9 @@
+echo ~
+echo ~/dir
+echo ~root
+echo ~root/dir
+echo a~
+echo $HOME
+echo x$HOME/y
+echo $HOME$HOME
+ls ~ > /dev/null

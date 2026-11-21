@@ -1,0 +1,13 @@
+# "no queda bloqueado esperando ... actualiza bgpid ... y muestra su valor con el formato "[%d]\n"" (por stderr)
+t0=$(now_ms)
+msh_run <<'IN'
+sleep 3 &
+echo $bgpid
+IN
+t1=$(now_ms)
+[ $((t1 - t0)) -lt 2000 ] || fail "msh se bloqueó esperando al mandato en background ($((t1-t0)) ms)"
+pid=$(grep -oE '^\[[0-9]+\]$' "$T/err" | tr -d '[]' | head -1)
+[ -n "$pid" ] || fail "no aparece \"[pid]\" en una línea propia de stderr"
+expect_out "$pid"
+grep -q "^\[" "$T/out" && fail "\"[pid]\" debe ir por stderr, no por stdout"
+[ "$(ps -o comm= -p "$pid" 2>/dev/null)" = sleep ] || fail "bgpid ($pid) no es el proceso sleep"

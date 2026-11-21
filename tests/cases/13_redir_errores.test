@@ -1,0 +1,14 @@
+# "En caso de cualquier error durante las redirecciones, se notifica (por el
+#  estándar error) y se suspende la ejecución de la línea."
+msh_run <<'IN'
+cat < /noexiste
+echo sigue1
+echo hola > /noexiste/f
+echo sigue2
+echo x | cat > /noexiste/f
+echo sigue3
+ls / >& /noexiste/f
+echo sigue4
+IN
+expect_out sigue1 sigue2 sigue3 sigue4
+expect_err_msg

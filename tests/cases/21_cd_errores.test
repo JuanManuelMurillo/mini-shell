@@ -1,0 +1,12 @@
+# "Todo mandato interno comprueba el número de argumentos ... si encuentra este o cualquier
+#  otro error, lo notifica (por el estándar error) y termina con valor distinto de cero."
+msh_run <<'IN'
+cd /noexiste
+echo st=$status
+cd / /tmp
+echo st=$status
+pwd
+IN
+expect_err_msg
+expect_st_nonzero 2
+expect_eq "$(tail -1 "$T/out")" "$PWD" "directorio tras cd erróneos"

@@ -1,0 +1,12 @@
+# "> fichero ... Si el fichero no existe se crea, si existe se trunca, modo de creación 0666"
+# ">& fichero ... (ídem)"
+msh_run <<'IN'
+umask 0
+echo largo largo largo > f.txt
+echo corto > f.txt
+ls /noexiste >& e.txt
+IN
+expect_eq "$(stat -c %a f.txt)" 666 "permisos de f.txt con umask 0"
+expect_eq "$(stat -c %a e.txt)" 666 "permisos de e.txt con umask 0"
+expect_eq "$(cat f.txt)" corto "f.txt debe truncarse"
+grep -q noexiste e.txt || fail "e.txt no contiene el error de ls"

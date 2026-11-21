@@ -1,0 +1,2 @@
+ls /noexiste >& err.txt
+wc -l < err.txt

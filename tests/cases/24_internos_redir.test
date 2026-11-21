@@ -1,0 +1,12 @@
+# Los mandatos internos presentan su resultado por la salida estándar → se puede redirigir,
+# y msh debe restaurar su salida estándar después.
+m=$(printf '%o' $((0$(umask))))
+msh_run <<IN
+umask > u.txt
+echo hola
+cd / > $PWD/c.txt
+pwd
+IN
+expect_out hola /
+expect_eq "$(cat u.txt 2>/dev/null)" "$m" "contenido de u.txt"
+expect_eq "$(cat c.txt 2>/dev/null)" / "contenido de c.txt"

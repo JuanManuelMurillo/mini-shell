@@ -1,0 +1,35 @@
+# "Ni el minishell ni los mandatos lanzados en background deben morir por señales generadas
+#  desde teclado: SIGINT, SIGQUIT. Los mandatos en primer plano mantienen la acción por defecto."
+trap '' PIPE
+mkfifo "$T/fifo"
+"$MSH" < "$T/fifo" > "$T/out" 2> "$T/err" & m=$!
+exec 3> "$T/fifo"
+cleanup() { kill -9 $bg $fg $m 2>/dev/null; }
+
+echo "sleep 20 &" >&3; sleep 0.5
+bg=$(grep -oE '^\[[0-9]+\]$' "$T/err" | tr -d '[]' | head -1)
+
+kill -INT $m; kill -QUIT $m; sleep 0.3
+alive $m || { fail "msh muere con SIGINT/SIGQUIT"; cleanup; return; }
+
+if [ -n "$bg" ]; then
+    kill -INT $bg; kill -QUIT $bg; sleep 0.3
+    alive $bg || fail "el mandato en background muere con SIGINT/SIGQUIT"
+else
+    fail "no se pudo obtener el pid del mandato en background"
+fi
+
+for sig in INT QUIT; do
+    echo "sleep 20" >&3; sleep 0.5
+    fg=$(pgrep -P $m -x sleep | grep -vx "${bg:-0}" | head -1)
+    [ -n "$fg" ] || { fail "no se encontró el sleep en primer plano"; continue; }
+    kill -$sig $fg; sleep 0.3
+    alive $fg && fail "el mandato en primer plano no muere con SIG$sig"
+done
+
+echo "echo vivo" >&3
+exec 3>&-
+for i in $(seq 50); do alive $m || break; sleep 0.1; done
+alive $m && fail "msh no termina al recibir EOF"
+grep -qx vivo "$T/out" || fail "msh no sigue funcionando tras las señales"
+cleanup
