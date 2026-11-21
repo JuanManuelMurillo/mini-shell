@@ -168,6 +168,16 @@ int main(void)
 			for(int i = 0; i < argvc; i++) {
 				waitpid(pids[i], &st, 0);
 			}
+		} else {
+			// Buffer estático, putenv guarda el puntero
+			static char str[32];
+
+			// Guarda el pid del último mandato en la variable bgpid
+			snprintf(str, sizeof(str), "bgpid=%d", pids[argvc - 1]);
+			putenv(str);
+
+			// Muestra el pid por el estandar error
+			fprintf(stderr, "[%d]\n", pids[argvc - 1]);
 		}
 
 		free(pids);
