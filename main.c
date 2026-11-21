@@ -21,6 +21,9 @@
 #include <stddef.h>			/* NULL */
 #include <stdio.h>			/* setbuf, printf */
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 extern int obtain_order();		/* See parser.y for description */
 
@@ -33,6 +36,8 @@ int main(void)
 	char *filev[3] = { NULL, NULL, NULL };
 	int bg;
 	int ret;
+	pid_t pid;
+	int f[2];
 
 	setbuf(stdout, NULL);			/* Unbuffered */
 	setbuf(stdin, NULL);
@@ -51,9 +56,26 @@ int main(void)
  * argvv Y filev. ESTAS LINEAS DEBERAN SER ELIMINADAS.
  */
 		for (argvc = 0; (argv = argvv[argvc]); argvc++) {
-			for (argc = 0; argv[argc]; argc++)
-				printf("%s ", argv[argc]);
-			printf("\n");
+				pid = fork();
+
+				if(pid < 0) {
+					perror("fork()");
+					return 1;
+				}
+				if (pid == 0) {
+					// Proceso hijo
+					execvp(argv[0], argv);
+
+					perror("exec()");
+					return 1;
+
+				} else if (pid > 0) {
+					// Proceso padre
+					if (!bg) {
+						wait(NULL);
+					}
+
+			}
 		}
 		if (filev[0]) printf("< %s\n", filev[0]);/* IN */
 		if (filev[1]) printf("> %s\n", filev[1]);/* OUT */
