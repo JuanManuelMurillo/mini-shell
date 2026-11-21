@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <signal.h>
 
 extern int obtain_order();		/* See parser.y for description */
 
@@ -44,6 +45,14 @@ int main(void)
 
 	setbuf(stdout, NULL);			/* Unbuffered */
 	setbuf(stdin, NULL);
+
+	// El msh ignora las señales de teclado (se hereda en los hijos)
+	struct sigaction sa;
+	sa.sa_handler = SIG_IGN;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);
 
 	while (1) {
 
@@ -113,6 +122,14 @@ int main(void)
 
 				// Proceso hijo
 				case 0:
+
+					// En primer plano se restaura la acción por defecto
+					// En background se mantiene ignorada
+					if(!bg) {
+						sa.sa_handler = SIG_DFL;
+						sigaction(SIGINT, &sa, NULL);
+						sigaction(SIGQUIT, &sa, NULL);
+					}
 
 					if(i == 0 && redir[0] != -1) {
 						dup2(redir[0], 0);
