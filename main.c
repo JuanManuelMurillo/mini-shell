@@ -37,49 +37,84 @@ int main(void)
 	int bg;
 	int ret;
 	pid_t pid;
-	int f[2];
+	int fd[2];
+	int prev_in;
 	int st;
 
 	setbuf(stdout, NULL);			/* Unbuffered */
 	setbuf(stdin, NULL);
 
 	while (1) {
+
+		while(waitpid(-1, NULL, WNOHANG) > 0);
+
 		fprintf(stderr, "%s", "msh> ");	/* Prompt */
 		ret = obtain_order(&argvv, filev, &bg);
 		if (ret == 0) break;		/* EOF */
 		if (ret == -1) continue;	/* Syntax error */
 		argvc = ret - 1;		/* Line */
 		if (argvc == 0) continue;	/* Empty line */
-#if 1
-/*
- * LAS LINEAS QUE A CONTINUACION SE PRESENTAN SON SOLO
- * PARA DAR UNA IDEA DE COMO UTILIZAR LAS ESTRUCTURAS
- * argvv Y filev. ESTAS LINEAS DEBERAN SER ELIMINADAS.
- */
-		for (argvc = 0; (argv = argvv[argvc]); argvc++) {
-				pid = fork();
 
-				if(pid < 0) {
-					perror("fork");
-					return 1;
+		pid_t *pids = malloc(argvc * sizeof(pid_t));
+
+		prev_in = -1;
+
+		for(int i = 0; i < argvc; i++) {
+			argv = argvv[i];
+			int is_last = (i == argvc - 1);
+			
+			if(!is_last) {
+				if(pipe(fd) == -1) {
+					perror("pipe");
+					exit(1);
 				}
-				if (pid == 0) {
-					// Proceso hijo
-					execvp(argv[0], argv);
+			}
 
-					perror("exec: ");
+			pid = fork();
+
+			switch(pid){
+				// Error en el fork
+				case -1:
+					perror("fork");
+					exit(1);
+
+				// Proceso hijo
+				case 0:
+					if(prev_in != -1) {
+						dup2(prev_in, 0);
+						close(prev_in);
+					}
+
+					if(!is_last) {
+						dup2(fd[1], 1);
+						close(fd[0]);
+						close(fd[1]);
+					}
+					execvp(argv[0], argv);
 					perror(argv[0]);
 					exit(1);
 
-				} else if (pid > 0) {
-					// Proceso padre
-					if (!bg) {
-						waitpid(pid, &st, 0);
+				// Proceso padre
+				default: 
+					if(prev_in != -1) {
+						close(prev_in);
 					}
 
+					if(!is_last) {
+						close(fd[1]);
+						prev_in = fd[0];
+					}
+					pids[i] = pid;
 			}
 		}
-#endif
+
+		// Si no está en el segundo plano
+		if(!bg) {
+			for(int i = 0; i < argvc; i++) {
+				waitpid(pids[i], &st, 0);
+			}
+		}
+
 	}
 	exit(0);
 	return 0;
