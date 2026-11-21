@@ -38,6 +38,7 @@ int main(void)
 	int ret;
 	pid_t pid;
 	int f[2];
+	int st;
 
 	setbuf(stdout, NULL);			/* Unbuffered */
 	setbuf(stdin, NULL);
@@ -59,31 +60,25 @@ int main(void)
 				pid = fork();
 
 				if(pid < 0) {
-					perror("fork()");
+					perror("fork");
 					return 1;
 				}
 				if (pid == 0) {
 					// Proceso hijo
 					execvp(argv[0], argv);
 
-					perror("exec()");
-					return 1;
+					perror("exec: ");
+					perror(argv[0]);
+					exit(1);
 
 				} else if (pid > 0) {
 					// Proceso padre
 					if (!bg) {
-						wait(NULL);
+						waitpid(pid, &st, 0);
 					}
 
 			}
 		}
-		if (filev[0]) printf("< %s\n", filev[0]);/* IN */
-		if (filev[1]) printf("> %s\n", filev[1]);/* OUT */
-		if (filev[2]) printf(">& %s\n", filev[2]);/* ERR */
-		if (bg) printf("&\n");
-/*
- * FIN DE LA PARTE A ELIMINAR
- */
 #endif
 	}
 	exit(0);
