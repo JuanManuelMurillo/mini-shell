@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 extern int obtain_order();		/* See parser.y for description */
 
@@ -57,6 +58,38 @@ int main(void)
 
 		pid_t *pids = malloc(argvc * sizeof(pid_t));
 
+		int redir[3] = { -1, -1, -1 };
+		int redir_error = 0;
+
+		if (filev[0]) {
+			if ((redir[0] = open(filev[0], O_RDONLY)) == -1) {
+				perror(filev[0]);
+				redir_error = 1;
+			}
+		}
+
+		if(!redir_error && filev[1]) {
+			if ((redir[1] = creat(filev[1], 0666)) == -1) {
+				perror(filev[1]);
+				redir_error = 1;
+			}
+		}
+
+		if(!redir_error && filev[2]) {
+			if ((redir[2] = creat(filev[2], 0666)) == -1) {
+				perror(filev[2]);
+				redir_error = 1;
+			}
+		}
+
+		if (redir_error) {
+			for (int k = 0; k < 3; k++) {
+				if (redir[k] != -1) close(redir[k]);
+			}
+			free(pids);
+			continue;
+		}
+
 		prev_in = -1;
 
 		for(int i = 0; i < argvc; i++) {
@@ -80,6 +113,23 @@ int main(void)
 
 				// Proceso hijo
 				case 0:
+
+					if(i == 0 && redir[0] != -1) {
+						dup2(redir[0], 0);
+					}
+
+					if(is_last && redir[1] != -1) {
+						dup2(redir[1], 1);
+					}
+
+					if(redir[2] != -1) {
+						dup2(redir[2], 2);
+					}
+
+					close(redir[0]);
+					close(redir[1]);
+					close(redir[2]);
+
 					if(prev_in != -1) {
 						dup2(prev_in, 0);
 						close(prev_in);
@@ -107,6 +157,11 @@ int main(void)
 					pids[i] = pid;
 			}
 		}
+		
+		close(redir[0]);
+		close(redir[1]);
+		close(redir[2]);
+
 
 		// Si no está en el segundo plano
 		if(!bg) {
@@ -114,6 +169,8 @@ int main(void)
 				waitpid(pids[i], &st, 0);
 			}
 		}
+
+		free(pids);
 
 	}
 	exit(0);
