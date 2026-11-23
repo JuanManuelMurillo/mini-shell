@@ -102,33 +102,39 @@ Ni el minishell ni los procesos en background mueren con `SIGINT` (Ctrl+C) ni co
 
 ```
 .
-├── main.c            ← Lógica del minishell (único fichero a modificar)
-├── parser.y          ← Gramática (yacc/bison) — NO MODIFICAR
-├── scanner.l         ← Analizador léxico (lex/flex) — NO MODIFICAR
-├── Makefile          ← Compilación — NO MODIFICAR
+├── src/
+│   ├── main.c        ← Lógica del minishell (único fichero a modificar)
+│   └── base/         ← Código proporcionado — NO MODIFICAR
+│       ├── parser.y  ← Gramática (yacc/bison)
+│       └── scanner.l ← Analizador léxico (lex/flex)
+├── Makefile          ← Compilación
 ├── autores.txt       ← Datos del autor (se entrega junto a main.c)
 ├── docs/
 │   └── msh.2026b.pdf ← Enunciado
-├── Dockerfile        ← Imagen Linux de desarrollo
-├── dev.sh            ← Atajos para compilar, ejecutar y probar en Linux
-└── tests/
-    ├── run_tests.sh  ← Ejecuta los tests
-    ├── lib.sh        ← Funciones de ayuda para los tests .test
-    └── cases/        ← Casos de prueba
+├── docker/
+│   ├── Dockerfile    ← Imagen Linux de desarrollo
+│   └── dev.sh        ← Atajos para compilar, ejecutar y probar en Linux
+├── tests/
+│   ├── run_tests.sh  ← Ejecuta los tests
+│   ├── lib.sh        ← Funciones de ayuda para los tests .test
+│   └── cases/        ← Casos de prueba
+├── build/            ← Objetos y fuentes generadas (parser.c, scanner.c, y.tab.h) — se crea al compilar
+└── bin/
+    └── msh           ← Ejecutable — se crea al compilar
 ```
 
-### `scanner.l`: analizador léxico
+### `src/base/scanner.l`: analizador léxico
 
 Generado con `flex`. Separa la entrada en tokens:
 
 - **Separadores:** `|`, `<`, `>`, `&` y el salto de línea, que se devuelven como caracteres sueltos.
 - **Textos (`TXT`):** cualquier secuencia sin blancos ni separadores. Se copian con `strdup`.
 
-Cuando la entrada **no** es un terminal (por ejemplo `./msh < fichero`), repite por stderr lo que lee. Así las trazas de prueba muestran qué línea se está ejecutando.
+Cuando la entrada **no** es un terminal (por ejemplo `bin/msh < fichero`), repite por stderr lo que lee. Así las trazas de prueba muestran qué línea se está ejecutando.
 
 > No reconoce comillas: `echo "a b"` produce los textos `"a` y `b"`.
 
-### `parser.y`: analizador gramatical
+### `src/base/parser.y`: analizador gramatical
 
 Generado con `bison --yacc`. Reconoce líneas con esta forma:
 
@@ -162,7 +168,7 @@ int obtain_order(char ****argvv, char *filev[3], int *bg);
 
 La memoria de `argvv` y `filev` la gestiona el parser: se libera en la siguiente llamada.
 
-### `main.c`: el minishell
+### `src/main.c`: el minishell
 
 Bucle principal: mostrar el prompt, llamar a `obtain_order` y ejecutar la línea. Aquí se implementa todo lo descrito en [Qué hace el minishell](#qué-hace-el-minishell).
 
@@ -170,8 +176,8 @@ Bucle principal: mostrar el prompt, llamar a `obtain_order` y ejecutar la línea
 
 | Objetivo | Acción |
 |---|---|
-| `make` | Genera `parser.c`, `y.tab.h` y `scanner.c` y enlaza `msh` |
-| `make clean` | Borra los binarios y los ficheros generados |
+| `make` | Genera `parser.c`, `y.tab.h` y `scanner.c` en `build/`, compila los `.o` allí y enlaza `bin/msh` |
+| `make clean` | Borra `build/` y `bin/` |
 
 ---
 
@@ -190,25 +196,25 @@ O, para que arranque sola al iniciar sesión: `brew services start colima`.
 
 > Colima solo comparte `$HOME` con la máquina virtual: el proyecto debe estar dentro de tu carpeta de usuario.
 
-### Entorno Linux: `dev.sh`
+### Entorno Linux: `docker/dev.sh`
 
 La primera ejecución construye la imagen `msh-dev`: Debian con `gcc`, `make`, `bison`, `flex`, `gdb`, `valgrind`, `strace` y las páginas `man` de POSIX. El proyecto se monta en `/msh` y los ficheros generados siguen perteneciendo a tu usuario.
 
 | Orden | Acción |
 |---|---|
-| `./dev.sh` | Shell bash dentro de Linux |
-| `./dev.sh run` | Compila y ejecuta `msh` |
-| `./dev.sh build` | Recompila desde cero |
-| `./dev.sh test [patrón]` | Recompila y pasa los tests (todos o los que contengan `patrón`) |
-| `./dev.sh valgrind` | Ejecuta `msh` con valgrind (fugas de memoria y descriptores abiertos) |
-| `./dev.sh clean` | `make clean` |
-| `./dev.sh rebuild-image` | Reconstruye la imagen desde cero |
-| `./dev.sh <orden...>` | Ejecuta cualquier orden en el contenedor |
+| `docker/dev.sh` | Shell bash dentro de Linux |
+| `docker/dev.sh run` | Compila y ejecuta `msh` |
+| `docker/dev.sh build` | Recompila desde cero |
+| `docker/dev.sh test [patrón]` | Recompila y pasa los tests (todos o los que contengan `patrón`) |
+| `docker/dev.sh valgrind` | Ejecuta `msh` con valgrind (fugas de memoria y descriptores abiertos) |
+| `docker/dev.sh clean` | `make clean` |
+| `docker/dev.sh rebuild-image` | Reconstruye la imagen desde cero |
+| `docker/dev.sh <orden...>` | Ejecuta cualquier orden en el contenedor |
 
 ### Uso
 
 ```bash
-./dev.sh run
+docker/dev.sh run
 msh> ls -l | wc -l
 msh> sleep 10 &
 [1234]
@@ -218,13 +224,13 @@ msh> cd /tmp
 
 **Salir:** Ctrl+D (fin de fichero).
 
-Para ejecutar un guion de órdenes: `./msh < fichero`. Cada línea se repite por stderr.
+Para ejecutar un guion de órdenes: `bin/msh < fichero`. Cada línea se repite por stderr.
 
 ### En un Linux nativo
 
 ```bash
 make
-./msh
+bin/msh
 ```
 
 ---
@@ -232,8 +238,8 @@ make
 ## Tests
 
 ```bash
-./dev.sh test          # todos
-./dev.sh test pipe     # solo los que contienen "pipe"
+docker/dev.sh test          # todos
+docker/dev.sh test pipe     # solo los que contienen "pipe"
 ```
 
 Cada test se ejecuta en un directorio vacío. Hay dos tipos:
@@ -278,12 +284,12 @@ Funciones disponibles en [tests/lib.sh](tests/lib.sh):
 
 ## Depuración
 
-Todo esto se ejecuta dentro de `./dev.sh`:
+Todo esto se ejecuta dentro de `docker/dev.sh`:
 
 ```bash
-gdb ./msh                               # depurador
-valgrind --track-fds=yes ./msh          # descriptores sin cerrar al salir
-strace -f -e trace=process,pipe,dup2,open ./msh   # llamadas al sistema de msh y sus hijos
+gdb bin/msh                               # depurador
+valgrind --track-fds=yes bin/msh          # descriptores sin cerrar al salir
+strace -f -e trace=process,pipe,dup2,open bin/msh   # llamadas al sistema de msh y sus hijos
 man 2 fork      man 3p pipe              # manual de Linux / POSIX
 ```
 

@@ -24,19 +24,45 @@ YFLAGS	= -d
 LEX	= flex
 LFLAGS	=
 
-OBJS	= parser.o scanner.o main.o
+SRCDIR	= src
+BASEDIR	= $(SRCDIR)/base
+OBJDIR	= build
+BINDIR	= bin
+TARGET	= $(BINDIR)/msh
+OBJS	= $(addprefix $(OBJDIR)/,parser.o scanner.o main.o)
 
-all: msh
+all: $(TARGET)
 
-msh: $(OBJS)
+$(TARGET): $(OBJS) | $(BINDIR)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS)
 
+# Ficheros generados por bison y flex (en build/)
+$(OBJDIR)/parser.c: $(BASEDIR)/parser.y | $(OBJDIR)
+	$(YACC) $(YFLAGS) -b $(OBJDIR)/y $<
+	mv -f $(OBJDIR)/y.tab.c $@
+
+$(OBJDIR)/y.tab.h: $(OBJDIR)/parser.c ;
+
+$(OBJDIR)/scanner.c: $(BASEDIR)/scanner.l | $(OBJDIR)
+	$(LEX) $(LFLAGS) -t $< > $@
+
+$(OBJDIR)/%.o: $(OBJDIR)/%.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -I$(OBJDIR) -c -o $@ $<
+
+$(OBJDIR)/scanner.o: $(OBJDIR)/y.tab.h
+
+$(OBJDIR)/main.o: $(SRCDIR)/main.c | $(OBJDIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+$(OBJDIR) $(BINDIR):
+	mkdir -p $@
+
 clean:
-	rm -f *.tab.? *.o *.bak *~ parser.c scanner.c core msh
+	rm -rf $(OBJDIR) $(BINDIR)
+	rm -f *.bak *~ core
 
 cleanall: clean
 	rm -f :* freefds* nofiles* killmyself* sigdfl*
 
 depend:
-	makedepend main.c parser.y scanner.l
-
+	makedepend $(SRCDIR)/main.c $(BASEDIR)/parser.y $(BASEDIR)/scanner.l

@@ -7,8 +7,8 @@
 # Uso: tests/run_tests.sh [patrón]     p. ej.  tests/run_tests.sh read
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
-MSH=$ROOT/msh
-[ -x "$MSH" ] || { echo "No existe ./msh (ejecuta make)"; exit 1; }
+MSH=$ROOT/bin/msh
+[ -x "$MSH" ] || { echo "No existe bin/msh (ejecuta make)"; exit 1; }
 
 TIMEOUT=""; command -v timeout >/dev/null && TIMEOUT="timeout 5"
 pass=0; fail=0
