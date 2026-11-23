@@ -235,16 +235,17 @@ static int put_var(char *name, char *value) {
 
 // read Variable [Variable...]
 static int int_read(int argc, char **argv) {
-	// Comprobar el número de argumentos
-	if(argc < 2) {
-		fprintf(stderr, "Falta el nombre de la variable\n");
-		return 1;
-	}
 
 	char line[4096];
 
 	// Leer una línea del stdin
 	if(fgets(line, sizeof(line), stdin) == NULL) {
+		return 1;
+	}
+
+	// Comprobar el número de argumentos
+	if(argc < 2) {
+		fprintf(stderr, "Falta el nombre de la variable\n");
 		return 1;
 	}
 
@@ -430,15 +431,19 @@ int main(void)
 
 			// Mandato interno en el propio msh
 			if(is_last && !bg && is_builtin(argv)) {
-				// No lee de la tubería anterior
-				if(prev_in != -1) {
-					close(prev_in);
-				}
 
 				// Guarda los descriptores del msh para restaurarlos después
 				int saved_in = dup(0);
 				int saved_out = dup(1);
 				int saved_err = dup(2);
+
+				// No lee de la tubería anterior
+				if(prev_in != -1) {
+					dup2(prev_in, 0);
+					close(prev_in);
+				}
+
+
 
 				// Aplica las redirecciones
 				if(i == 0 && redir[0] != -1) {
@@ -462,6 +467,7 @@ int main(void)
 				close(saved_in);
 				close(saved_out);
 				close(saved_err);
+				clearerr(stdin);
 
 				// No hay proceso al que esperar
 				pids[i] = -1;
@@ -555,11 +561,9 @@ int main(void)
 
 
 		if(!bg) {
-			// Primer plano -> esperar a todos los mandatos de la secuencia
-			for(int i = 0; i < argvc; i++) {
-				if(pids[i] != -1) {
-					waitpid(pids[i], &st, 0);
-				}
+			// Primer plano
+			if(pids[argvc - 1] != -1) {
+				waitpid(pids[argvc - 1], &st, 0);
 			}
 		} else {
 			// Buffer estático, putenv guarda el puntero
